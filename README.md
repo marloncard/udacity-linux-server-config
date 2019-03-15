@@ -1,17 +1,24 @@
 # UDACITY - Full Stack Web Developer Nanodegree
-*PROJECT: Linux Server Configuration*
+
+*Project: Linux Server Configuration*
+
 Marlon Card
 
 ## Description
 For this project we are to configure & secure a linux server and use it to deploy our previously completed [catalog application](https://github.com/marloncard/udacity-item-catalog). The Udacity recommended provider was [Amazon Lightsail](https://aws.amazon.com/lightsail/).
 
 ## Contents
-[Project Requirements](#project-requirements)
-[Get Server](#get-server)
-[Connect to Instance](#connect-to-instance)
-[Update](#update)
-[Secure](#secure)
-[Create User](#create-user)
+1. [Project Requirements](#project-requirements)
+2. [Get Server](#get-server)
+3. [Connect to Instance](#connect-to-instance)
+4. [Update](#update)
+5. [Secure](#secure)
+6. [Create User](#create-user)
+7. [Deploy Application](#deploy-application)
+8. [Finalize & Debug](#finalize-&-debug)
+8. [Tips](#tips)
+9. [References](#references)
+10. [License](#license)
 
 ## Project Requirements
 1. SSH Key allowing login as `grader`
@@ -69,8 +76,7 @@ The next step which is good to do early on for a few reasons is to secure and ch
   * Look for "Port 22" and change to "Port 2200"
   * Look for the line `PasswordAuthentication yes` and change to `no` to disable password authentication.
 
-2. Check your UFW status: `sudo ufw status`; it should be 'inactive'
-  * Run the following commands:
+2. Check your UFW status: `sudo ufw status` (it should be 'inactive') and then run the following commands:
   ```
   sudo ufw default deny incoming
   sudo ufw default allow outgoing
@@ -89,7 +95,177 @@ Next we need to create a new user, `grader` to give the Udacity grader access to
 ```
 sudo adduser grader
 ```
-Copy ubuntu user profile located in `/etc/sudoers.d` named '90-cloud-init-users'. I was under the impression it would be called "ubuntu", like the username so this naming convention might be specific to Lightsail
+Copy ubuntu user profile located in `/etc/sudoers.d` in my case '90-cloud-init-users' (I verifid this was for the ubuntu user with `sudo cat /etc/sudoers.d/90-cloud-init-users`; the output was `ubuntu ALL=(ALL) NOPASSWD:ALL`)
 ```
-cp 90-cloud-init-users grader
+cp /etc/sudoers.d/90-cloud-init-users /etc/sudoers.d/grader
 ```
+
+I now needed to generate an SSH key pair for the user `grader`; I did that locally using the following commands:
+```
+ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): grader
+```
+A private key `grader` and public `grader.pub` are created in my directory ~/.ssh/ after which I ran: `less grader.pub` and copied it's contents.
+
+I then logged into the server with the `ubuntu` user and ran the following:
+```
+sudo nano ../grader/.ssh/authorized_keys
+```
+I then pasted the entire public key, saved, exited and completed with following commands:
+```
+sudo chmod 700 ../grader/.ssh/
+sudo chmod 644 ../grader/.ssh/authorized_keys
+sudo chown grader ../grader/.ssh/
+sudo chgrp grader ../grader/.ssh/
+sudo chown grader ../grader/.ssh/authorized_keys
+sudo chgrp grader ../grader/.ssh/authorized_keys
+```
+
+## Deploy Application
+With the main server configuration complete I now needed to actually deploy the application which consists of installing Python, [Apache](https://www.apache.org/), setup of PostgreSQL, creating the catalog database, modifying  application code to use PostgreSQL (I initially used SQLite3), installing prerequisite packages from the Vagrant VM environment, cloning the app's github repo, setup of WSGI and debugging.
+
+### Install Python
+
+I began with installing Python (Version 2.7 to match my development environment):
+```
+sudo apt-get install python2.7
+```
+
+### Apache
+
+To install Apache and the [mod_wsgi](https://en.wikipedia.org/wiki/Mod_wsgi) module:
+```
+sudo apt-get install apache2
+sudo apt-get install libapache2-mod-wsgi
+```
+You can confirm it's working correctly by visiting your server's IP Address in a browser where you'll see the Apache confirmation; the file itself is located here: `/var/www/html/index.html`
+
+### PostgreSQL
+
+Next install PostgreSQL:
+```
+sudo apt-get install postgresql
+```
+I then ran the following commands to log into the `postgres` user, starting up the psql terminal, and then create the db and user to which I assigned privileges to peform operations on the db:
+```
+sudo su -postgres
+psql
+postgres=# create database catalogdb;
+postgres=# create user catalog with encrypted password 'password';
+postgres=# grant all privileges on database catalogdb to catalog;
+postgres=# \q
+```
+
+### Install Pip
+
+[Pip](https://pip.pypa.io) is Python's package installer and is needed to install the remaining packages from your development environment. I ran the following:
+
+```
+sudo apt-get install python-pip
+```
+
+### Install Prerequisites
+
+To install the packages from your development environment (in my case a Vagrant VM running Ubuntu). In the development environment run the following from within your project folder:
+```
+pip freeze > requirements.txt
+```
+At this point you can add the generated `requirements.txt` file to your git and github repo then clone it to your server with the rest of the project files (which I'll describe how to do shortly).
+
+Once this file is on your server run:
+```
+sudo pip install -r requirements.txt
+```
+A word of warning, I initially left off `sudo` while installing packages and ran into Python not being able to import them from my app. Once I figured out what was happening I uninstalled all and reinstalled with `sudo` which fixed the issue. It's also important to take note of errors because you'll have to continue installing the remaining packages after the failure.
+
+### Install Git
+
+My git was preinstalled but if not run the following:
+```
+sudo apt-get install git
+```
+
+### Modify Code
+
+In order to prepare my application for the postgreSQL database I made the following changes within my development environment, created a new branch called 'deploy', committed and pushed to github. (I also fixed some column length issues in models.py which SQLite was apparently ignoring).
+
+`data.py`
+![data.py changes](https://i.imgur.com/abNloPk.png)
+
+`models.py`
+![models.py changes](https://i.imgur.com/ucN46uH.png)
+
+`views.py`
+![views.py changes](https://i.imgur.com/f4JYoxW.png)
+
+### Clone Repository
+
+I performed the following commands to clone the app repository onto my server:
+
+```
+cd /var/www/
+sudo git clone https://github.com/marloncard/udacity-item-catalog.git catalog
+cd catalog/
+sudo git checkout deploy
+```
+
+### WSGI Setup
+
+The Web Server Gateway Interface (WSGI) allows your web server to forward requests to web apps written in python. To start off I create a `myapp.wsgi` file in my catalog directory with the following code:
+```
+import sys
+
+sys.path.insert(0, "/var/www/catalog")
+
+from views import app as application
+
+application.secret_key='<your_key_here>'
+```
+
+Next I created a conf file `sudo nano /etc/apache2/sites-available/catalog.conf` with the following:
+
+```
+<VirtualHost *:80>
+    ServerName 35.182.81.85
+    WSGIScriptAlias / /var/www/catalog/myapp.wsgi
+
+    <Directory /var/www/catalog>
+        Order allow,deny
+        Allow from all
+    </Directory>
+</VirtualHost>
+
+```
+
+## Finalize & Debug
+
+Reload Apache with `sudo service apache2 reload` and technically the site should now be viewable in a browser at `35.182.81.85` but I had an error because there were a few more changes to make which consisted of putting the full path to all secret key & password json files:
+
+`models.py`
+![models.py](https://i.imgur.com/LYwXCm9.png)
+
+`views.py`
+![views.py](https://i.imgur.com/xkrGDYk.png)
+
+I also needed to prevent access to the `.git` folder which I did with an .htaccess file in the project directory:
+
+`.htaccess`
+![.htaccess](https://i.imgur.com/VYBvQsK.png)
+
+
+
+## Tips
+* Lightsail allows you to create snapshots of your instance as a backup in case you're concerned about destroying your setup (I located this feature after locking myself out of the instance for the second time while configuring ports)
+* Lightsail can generate SSH keys for you in your profile, if you're having trouble with the locally created keys. You just need to download the private, move it to your `~/.ssh` folder and login.
+* The Apache error log is indispensable towards the end of your deployment; it's located here: `/var/log/apache2/error.log`
+
+## References
+
+* [Creating user, database and adding access on PostgreSQL](https://medium.com/coding-blocks/creating-user-database-and-adding-access-on-postgresql-8bfcd2f4a91e)
+* [How To Deploy a Flask Application on an Ubuntu VPS](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps)
+* [How To Secure PostgreSQL on an Ubuntu VPS](https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps)
+* [How do I prevent apache from serving the .git directory?](https://serverfault.com/questions/128069/how-do-i-prevent-apache-from-serving-the-git-directory)
+
+## License
+This repository and its content was created by Marlon Card and is covered under terms of the [MIT License](LICENSE).

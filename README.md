@@ -9,16 +9,17 @@ For this project we are to configure & secure a linux server and use it to deplo
 
 ## Contents
 1. [Project Requirements](#project-requirements)
-2. [Get Server](#get-server)
-3. [Connect to Instance](#connect-to-instance)
-4. [Update](#update)
-5. [Secure](#secure)
-6. [Create User](#create-user)
-7. [Deploy Application](#deploy-application)
-8. [Finalize and Debug](#finalize-and-debug)
-8. [Tips](#tips)
-9. [References](#references)
-10. [License](#license)
+2. [Software Installed](#software-installed)
+3. [Get Server](#get-server)
+4. [Connect to Instance](#connect-to-instance)
+5. [Update](#update)
+6. [Secure](#secure)
+7. [Create User](#create-user)
+8. [Deploy Application](#deploy-application)
+9. [Finalize and Debug](#finalize-and-debug)
+10. [Tips](#tips)
+11. [References](#references)
+12. [License](#license)
 
 ## Project Requirements
 1. SSH Key allowing login as `grader`
@@ -32,6 +33,41 @@ For this project we are to configure & secure a linux server and use it to deplo
 9. Server is configured to serve data (PostgreSQL)
 10. Web server is configured to serve the application as a WSGI app.
 11. README file on github
+
+## Software Installed
+
+- [Python 2.7x](https://www.python.org/)
+- [Apache 2](https://www.apache.org/)
+- [PostgreSQL 9.5.14](https://www.postgresql.org/)
+- [Git 2.7.4](https://git-scm.com/)
+- [Uncomplicated Firewall (ufw)](https://wiki.ubuntu.com/UncomplicatedFirewall)
+- [mod_wsgi](https://modwsgi.readthedocs.io/en/develop/)
+- [Pip](https://pypi.org/project/pip/)
+- [Certbot](https://certbot.eff.org/)
+
+*Python Packages:*
+- bleach==3.1.0
+- Flask==1.0.2
+- Flask-HTTPAuth==3.2.4
+- Flask-SQLAlchemy==2.3.2
+- html5lib==0.999
+- httplib2==0.12.0
+- itsdangerous==1.1.0
+- Jinja2==2.10
+- oauth2client==4.1.3
+- packaging==18.0
+- passlib==1.7.1
+- psycopg2-binary==2.7.6.1
+- pyparsing==2.3.1
+- redis==3.0.1
+- requests==2.21.0
+- rsa==4.0
+- six==1.12.0
+- SQLAlchemy==1.2.16
+- urllib3==1.24.1
+- webencodings==0.5.1
+- Werkzeug==0.14.1
+
 
 ## Get Server
 I used the recommended [Amazon Lightsail](https://aws.amazon.com/lightsail/) which provides 1 month free as of this writing. The lowest tier linux plan was sufficient for the project.
@@ -65,7 +101,7 @@ Regardless of Operating System you'll need to have the following ready:
 ## Update
 The first thing you'll want to do when you've successfully logged into your server is to update
 * Run `sudo apt-get update` to update your package lists
-* Then perform `sudo apt-get upgrade` to actually update the software
+* Then perform `sudo apt-get dist-upgrade` to actually update the software (The Udacity reviewer pointed out that `sudo apt-get upgrade` doesn't actually [update everything](https://askubuntu.com/questions/194651/why-use-apt-get-upgrade-instead-of-apt-get-dist-upgrade) and seems to be useful only if keeping your system state the same is necessary; probably less important when you're setting up a new server)
 
 ## Secure
 The next step which is good to do early on to secure and change your ports if necessary. This was especially good advice as I found out it's very easy to lock yourself out of your instance; if that happens, you will have to delete and create a new one.
@@ -124,7 +160,7 @@ sudo chgrp grader ../grader/.ssh/authorized_keys
 ```
 
 ## Deploy Application
-With the main server configuration complete I now needed to actually deploy the application which consists of installing Python, [Apache](https://www.apache.org/), setup of PostgreSQL, creating the catalog database, modifying  application code to use PostgreSQL (I initially used SQLite3), installing prerequisite packages from the Vagrant VM environment, cloning the app's github repo, setup of WSGI and debugging.
+With the main server configuration complete I now needed to actually deploy the application which consists of installing Python, Apache, setup of PostgreSQL, creating the catalog database, modifying  application code to use PostgreSQL (I initially used SQLite3), installing prerequisite packages from the Vagrant VM environment, cloning the app's github repo, setup of WSGI and debugging.
 
 ### Install Python
 

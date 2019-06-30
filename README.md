@@ -123,7 +123,7 @@ The next step which is good to do early on to secure and change your ports if ne
 3. Configure the Lightsail firewall in your control panel to match the ufw ports you've allowed.
 ![Lightsail Ports](https://i.imgur.com/fpJRaYR.png)
 
-4. Exit and restart your SSH session, this time using port `2200`
+4. Exit and restart your SSH session, this time using port `2200` (It might be necessary to reboot the instance if your connection is denied)
 
 ## Create User
 Next we need to create a new user, `grader` to give the Udacity grader access to check our server. I used the following commands:

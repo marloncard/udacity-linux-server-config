@@ -1,0 +1,6 @@
+.vagrant/
+Vagrantfile
+*.txt
+grader
+*.pub
+*.pem

@@ -186,7 +186,7 @@ sudo apt-get install postgresql
 ```
 I then ran the following commands to log into the `postgres` user, starting up the psql terminal, and then create the database and user to which I assigned privileges to peform operations on the database:
 ```
-sudo su -postgres
+sudo su- postgres
 psql
 postgres=# create database catalogdb;
 postgres=# create user catalog with encrypted password 'password';
